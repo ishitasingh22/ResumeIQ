@@ -3,6 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const express = require("express");
+const path = require("node:path");
 const connectDatabase = require("./config/database");
 const authRoutes = require("./routes/auth");
 const interviewRoutes = require("./routes/interview");
@@ -11,9 +12,21 @@ const resumeRoutes = require("./routes/resume");
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.RENDER_EXTERNAL_URL,
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://127.0.0.1:5173",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Origin not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
@@ -27,6 +40,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api/interview", interviewRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/resume", resumeRoutes);
+
+const clientBuildPath = path.resolve(__dirname, "../../client/dist");
+app.use(express.static(clientBuildPath, { index: false }));
+
+app.get(/.*/, (req, res, next) => {
+  if (req.path.startsWith("/api/") || !req.accepts("html")) {
+    return next();
+  }
+
+  return res.sendFile(path.join(clientBuildPath, "index.html"), (error) => {
+    if (error) next(error);
+  });
+});
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

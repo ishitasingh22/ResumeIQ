@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: resumeiq
+    runtime: node
+    plan: free
+    buildCommand: npm ci --prefix client && npm run build --prefix client && npm ci --prefix server
+    startCommand: npm start --prefix server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.11.1
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: LLM_API_URL
+        value: https://api.openai.com/v1/chat/completions
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
